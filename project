@@ -1,0 +1,253 @@
+using System;
+using System.Collections.Generic;
+
+namespace Blackjack
+{
+    class Card
+    {
+        public string Suit { get; set; }
+        public string Rank { get; set; }
+        public int Value { get; set; }
+
+        public Card(string suit, string rank, int value)
+        {
+            Suit = suit;
+            Rank = rank;
+            Value = value;
+        }
+
+        public override string ToString()
+        {
+            return Rank + " of " + Suit;
+        }
+    }
+
+    class Deck
+    {
+        private List<Card> cards;
+
+        public Deck()
+        {
+            cards = new List<Card>();
+            string[] suits = { "Hearts", "Diamonds", "Clubs", "Spades" };
+            string[] ranks = { "Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King" };
+            foreach (string suit in suits)
+            {
+                foreach (string rank in ranks)
+                {
+                    int value = (rank == "Ace") ? 11 : (rank == "Jack" || rank == "Queen" || rank == "King") ? 10 : int.Parse(rank);
+                    cards.Add(new Card(suit, rank, value));
+                }
+            }
+            Shuffle();
+        }
+
+        private void Shuffle()
+        {
+            Random random = new Random();
+            for (int i = cards.Count - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                Card temp = cards[i];
+                cards[i] = cards[j];
+                cards[j] = temp;
+            }
+        }
+
+        public Card DealCard()
+        {
+            Card card = cards[0];
+            cards.RemoveAt(0);
+            return card;
+        }
+    }
+
+    class Hand
+    {
+        public List<Card> Cards { get; set; }
+        public int Value { get; set; }
+
+        public Hand()
+        {
+            Cards = new List<Card>();
+            Value = 0;
+        }
+
+        public void AddCard(Card card)
+        {
+            Cards.Add(card);
+            Value += card.Value;
+            // Adjust for Aces:
+            if (Value > 21 && Cards.Exists(c => c.Rank == "Ace"))
+            {
+                Value -= 10;
+            }
+        }
+
+        public bool IsBust()
+        {
+            return Value > 21;
+        }
+
+        public void ResetHand() // Added method to reset hand
+        {
+            Cards.Clear();
+            Value = 0;
+        }
+    }
+
+    class Player
+    {
+        public Hand Hand { get; set; }
+
+        public Player()
+        {
+            Hand = new Hand();
+        }
+
+        public void Hit(Deck deck)
+        {
+            Hand.AddCard(deck.DealCard());
+        }
+
+        public void Stand() { }
+    }
+
+    class Dealer
+    {
+        public Hand Hand { get; set; }
+
+        public Dealer()
+        {
+            Hand = new Hand();
+        }
+
+        public void Hit(Deck deck)
+        {
+            Hand.AddCard(deck.DealCard());
+        }
+
+        public bool ShouldHit()
+        {
+            return Hand.Value <= 16;
+        }
+    }
+
+    class Game
+    {
+        private Deck deck;
+        private Player player;
+        private Dealer dealer;
+
+        public Game()
+        {
+            deck = new Deck();
+            player = new Player();
+            dealer = new Dealer();
+        }
+
+        public void Play()
+        {
+            while (true)
+            {
+                // Deal initial cards
+                player.Hand.AddCard(deck.DealCard());
+                player.Hand.AddCard(deck.DealCard());
+                dealer.Hand.AddCard(deck.DealCard());
+                dealer.Hand.AddCard(deck.DealCard());
+
+                // Player's turn
+                Console.WriteLine("Your hand:");
+                foreach (var card in player.Hand.Cards)
+                {
+                    Console.WriteLine(card);
+                }
+                Console.WriteLine("Your total: " + player.Hand.Value);
+
+                while (true)
+                {
+                    Console.WriteLine("Hit (h) or Stand (s)?");
+                    string input = Console.ReadLine().ToLower();
+                    if (input == "h")
+                    {
+                        player.Hit(deck);
+                        Console.WriteLine("Your hand:");
+                        foreach (var card in player.Hand.Cards)
+                        {
+                            Console.WriteLine(card);
+                        }
+                        Console.WriteLine("Your total: " + player.Hand.Value);
+                        if (player.Hand.IsBust())
+                        {
+                            Console.WriteLine("You bust! Dealer wins.");
+                            break;
+                        }
+                    }
+                    else if (input == "s")
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid input. Please enter 'h' or 's'.");
+                    }
+                }
+
+                // Dealer's turn
+                Console.WriteLine("Dealer's turn:");
+                while (dealer.ShouldHit())
+                {
+                    dealer.Hit(deck);
+                }
+                Console.WriteLine("Dealer's hand:");
+                foreach (var card in dealer.Hand.Cards)
+                {
+                    Console.WriteLine(card);
+                }
+                Console.WriteLine("Dealer's total: " + dealer.Hand.Value);
+
+                // Determine winner
+                if (player.Hand.IsBust())
+                {
+                    Console.WriteLine("You bust! Dealer wins.");
+                }
+                else if (dealer.Hand.IsBust())
+                {
+                    Console.WriteLine("Dealer busts! You win.");
+                }
+                else if (player.Hand.Value > dealer.Hand.Value)
+                {
+                    Console.WriteLine("You win!");
+                }
+                else if (player.Hand.Value < dealer.Hand.Value)
+                {
+                    Console.WriteLine("Dealer wins.");
+                }
+                else
+                {
+                    Console.WriteLine("Push. It's a tie.");
+                }
+
+                // Reset player and dealer hands for the next game
+                player.Hand.ResetHand();
+                dealer.Hand.ResetHand();
+
+                Console.WriteLine("Play again? (y/n)");
+                string playAgain = Console.ReadLine().ToLower();
+                if (playAgain != "y")
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Game game = new Game();
+            game.Play();
+        }
+    }
+}
